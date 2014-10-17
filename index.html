@@ -1,0 +1,217 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Do More Spreadsheet</title>
+	<link rel="stylesheet" href="stylesheets/app.css" />
+		
+	<!-- Modernizr -->
+	<!--<script src="bower_components/modernizr/modernizr.js"></script>-->
+
+	<!-- jQuery -->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+</head>
+
+<body>
+	<div class="row">
+		<!-- area where candidates are shown in the left column -->
+		<div id="candidates" class="large-6 columns">
+			<ul></ul>
+		</div> <!-- #candidates -->
+
+		<!-- area where the candidate data is shown in the right column -->
+		<div id="information" class="large-6 columns">
+			<ul></ul>
+		</div> <!-- #information -->
+	</div>
+
+	<script>
+		/*
+		Script below borrows heavily from gspreadsheet.js
+		https://code.google.com/p/trnsfrmr/source/browse/Transformer/scripts/gspreadsheet.js?r=eb1fb0561b81878e05abf1ed1b9db7c888d788c7
+		*/
+
+		// Set up our spreadsheet variable
+		var globalSpreadsheet;
+
+		/*
+			Execute on page load
+		*/
+		$(document).ready(function() {
+			// Load the spreadsheet into the variable
+			loadSpreadsheet("1jXYAe1l8ALni0Wci3VcWrukMpZ2WBfdr9g1yl9aJUzs");
+		});
+
+		/*
+			Load a Google spreadsheet given a specific key. This script expects that the spreadsheet
+			has column headers in row #1. This is why the first row of data corresponds to row #2.
+
+			Script below borrows heavily from gspreadsheet.https
+			js://code.google.com/p/trnsfrmr/source/browse/Transformer/scripts/gspreadsheet.js?r=eb1fb0561b81878e05abf1ed1b9db7c888d788c7
+
+			googleSpreadsheet is an object with the following format:
+				|- headers (array)
+				|	|- [0] Name of header #1
+				|	|- [1] Name of header #2
+				|	|- [2] Name of header #3
+				|
+				|- data (array)
+					|- [0] First Row of Data (object)
+					|	|- <Name of Header #1> -> Value in cell 2,1
+					|	|- <Name of Header #2> -> Value in cell 2,2
+					|	|- <Name of Header #3> -> Value in this 2,3
+					|
+					|- [1] Second Row of Data (object)
+					|	|- <Name of Header #1> -> Value in this 3,1
+					|	|- <Name of Header #2> -> Value in this 3,2
+					|	|- <Name of Header #3> -> Value in this 3,3
+					|
+					|- [2] Third Row of Data (object)
+						|- <Name of Header #1> -> Value in this 4,1
+						|- <Name of Header #2> -> Value in this 4,2
+						|- <Name of Header #3> -> Value in this 4,3
+		*/
+
+		function loadSpreadsheet(key) {
+			// Set up our spreadsheet variable
+			var googleSpreadsheet = {};
+			googleSpreadsheet.data = [];
+			googleSpreadsheet.headers = [];
+
+			// Load our spreadsheet
+			$.getJSON("https://spreadsheets.google.com/feeds/list/" + key + "/od6/public/values?alt=json-in-script&callback=?", 
+			function(data) {
+
+				// Get the data from the spreadsheet
+				var entries = data.feed.entry || [];
+
+				// Loop through all of the rows in the spreadsheet
+				for(var i = 0; i < entries.length; i++) {
+
+					// Get this particular row
+					var entry = entries[i];
+
+					// Set up an object to hold our row object
+					var row = {};
+
+					// Loop through each of the cells in the row
+					for(var item in entry) {  
+
+						// We only want "cells" which are "gsx$"
+						if (item.indexOf('gsx$') == 0) {
+
+							// Get the key of this cell, so take off the "gsx$"
+							var key = item.substring(4);
+
+							// We want to add the headers to the header object  
+							if (i == 0) {
+								googleSpreadsheet.headers.push(key);
+							}
+
+							// Put this item on the array           
+							row[key] = entry[item].$t;
+						}
+					}
+
+					// Put the row onto the array
+					googleSpreadsheet.data.push(row);
+				}
+			}).done(function() {
+				// Once we're all done loading and formatting the data, call the output function
+				// outputSpreadsheet(googleSpreadsheet);
+				
+				/*
+				if(parameter != null)
+					$('#candidates').html(parameter);
+				*/
+
+				displayCandidates(googleSpreadsheet);
+
+
+				globalSpreadsheet = googleSpreadsheet;
+			});
+		}
+
+		/*
+			Function to output a spreadsheet
+		*/
+		function outputSpreadsheet(googleSpreadsheet) {
+			// Loop through all of our rows
+			for(var j = 0; j < googleSpreadsheet.data.length; j++) {
+				// Add a Foundation 12 columns container to our candidates div. Note the data-j id so we can reference this later
+				$('#information').append("<div class='candidate-box'><a name='" + j + "'><div class='large-12 columns candidate' id='data-" + j + "'><dl></dl></div></a></div>");
+
+				// Loop through all of our cells/columns for this row
+				//Set i to the number of columns you want to skip if you want all of the columns set i to be 0
+				for(var i = 2; i < googleSpreadsheet.data.length; i++) {
+					// Put the column name as a dictionary term, and the value as the dictionary definination
+					$('#data-' + j + ' dl ').append("<dt><h3>" + googleSpreadsheet.headers[i] + "</h3></dt><dd>" + googleSpreadsheet.data[j][googleSpreadsheet.headers[i]] + "</dd>");
+				}
+			}
+		}
+
+
+		/*
+			Determine what candidates to show
+		*/
+		function displayCandidates(googleSpreadsheet) {	
+			// See if there's a municpality in the URL
+			var muni = getURLParameter('municipality');
+
+			// Variable for the header for this page
+			var muniTitle;
+
+			// Counter to keep track of how many rows have we output
+			var recordsShown = 0;
+
+			// No Muni was in the URL!
+			if(muni == null) {
+				// Try to load from the person's municaplity field
+
+				// Ok, couldn't figure out the municpality. Say we're showing all.
+				muniTitle = "all municipalities";
+			} else {
+				// We know the municaplity, so let's try again.
+				muniTitle = muni;
+			}
+
+			// Set the header of the candidates column
+			$('#candidates').prepend("<h4>Showing Candidates for " + muniTitle + "</h4>");
+
+
+			// Loop through the spreadsheet
+			for(var i = 0; i < googleSpreadsheet.data.length; i++) {
+				
+				// Does this record match the muni we're looking for? If no muni, then show all.
+				if(muni == null || muni == googleSpreadsheet.data[i].place) {
+					// Add it to the left list of names
+					$('#candidates ul').append("<li><a href='#candidate-" + googleSpreadsheet.data[i].number +"'>" + googleSpreadsheet.data[i].name + "</a></li>");
+				
+					// Show the data on the left side
+					$('#information ul').append(
+						"<li>" +
+							"<a name='candidate-" + googleSpreadsheet.data[i].number + "''></a>" +
+							"<h3>" + googleSpreadsheet.data[i].name + "</h3>" +
+							"<p><strong>Letter:</strong> " + googleSpreadsheet.data[i].letter + "</p>" +
+							"<p><strong>Number:</strong> " + googleSpreadsheet.data[i].number + "</p>" +
+							"<p><strong>Seat:</strong> " + googleSpreadsheet.data[i].seat +
+						"</li>"
+					);
+				}
+			}
+		}
+
+
+		/*
+			Function to get a URL parameter
+		*/
+		function getURLParameter(name) {
+			return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search)||[,""])[1].replace(/\+/g, '%20'))||null;
+		}
+	</script>
+
+	<!-- Foundation -->
+	<!--<script src="bower_components/foundation/js/foundation.min.js"></script>-->
+</body>
+</html>
