@@ -27,13 +27,9 @@
 	</div>
 
 	<script>
-		/*
-		Script below borrows heavily from gspreadsheet.js
-		https://code.google.com/p/trnsfrmr/source/browse/Transformer/scripts/gspreadsheet.js?r=eb1fb0561b81878e05abf1ed1b9db7c888d788c7
-		*/
-
 		// Set up our spreadsheet variable
 		var globalSpreadsheet;
+
 
 		/*
 			Execute on page load
@@ -42,6 +38,7 @@
 			// Load the spreadsheet into the variable
 			loadSpreadsheet("1jXYAe1l8ALni0Wci3VcWrukMpZ2WBfdr9g1yl9aJUzs");
 		});
+
 
 		/*
 			Load a Google spreadsheet given a specific key. This script expects that the spreadsheet
@@ -72,7 +69,6 @@
 						|- <Name of Header #2> -> Value in this 4,2
 						|- <Name of Header #3> -> Value in this 4,3
 		*/
-
 		function loadSpreadsheet(key) {
 			// Set up our spreadsheet variable
 			var googleSpreadsheet = {};
@@ -132,6 +128,7 @@
 				globalSpreadsheet = googleSpreadsheet;
 			});
 		}
+
 
 		/*
 			Function to output a spreadsheet
